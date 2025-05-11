@@ -7,6 +7,19 @@ import os
 
 def generate_random_word(length: int, include_numbers: bool = False, include_special: bool = False) -> str:
     """Generate a random word of a given length with optional numbers and special characters."""
+    # Common real words that are often used in web directories
+    real_words = ['admin', 'login', 'dashboard', 'profile', 'settings', 'upload', 
+                  'images', 'media', 'blog', 'posts', 'users', 'api', 'docs',
+                  'help', 'support', 'about', 'contact', 'search', 'register',
+                  'password', 'reset', 'config', 'setup', 'install', 'update',
+                  'backup', 'logs', 'stats', 'admin', 'test', 'dev', 'staging']
+    
+    # 70% chance to use a real word if it matches the length criteria
+    if random.random() < 0.7 and any(len(word) >= min_length and len(word) <= max_length for word in real_words):
+        suitable_words = [w for w in real_words if len(w) >= min_length and len(w) <= max_length]
+        return random.choice(suitable_words)
+    
+    # Otherwise generate random string
     chars = string.ascii_lowercase
     if include_numbers:
         chars += string.digits

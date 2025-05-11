@@ -209,7 +209,8 @@ class GoBusterWrapper:
 
             try:
                 path = self.queue.get_nowait()
-                print(f"\r{Fore.CYAN}[*] Scanning: {path:<50}", end='')
+                total_paths = self.queue.qsize()
+                print(f"\r{Fore.CYAN}[*] Scanning: {path:<50} ({total_paths} remaining)", end='')
                 sys.stdout.flush()
                 
                 result = self.check_directory(path)
@@ -268,6 +269,8 @@ class GoBusterWrapper:
         print(f"\n{Fore.YELLOW}[*] Target URL: {self.url}")
         print(f"[*] Threads: {self.options.get('threads', 10)}")
         print(f"[*] Wordlist: {self.options['wordlist']}")
+        print(f"[*] Scan started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"[*] Total paths to scan: {self.queue.qsize()}")
         if self.options.get('extensions'):
             print(f"[*] Extensions: {', '.join(self.options['extensions'])}")
 

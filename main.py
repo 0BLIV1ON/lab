@@ -49,9 +49,12 @@ class DirectoryScanner:
         return self.found_paths
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <url>")
-        sys.exit(1)
-
-    scanner = DirectoryScanner(sys.argv[1])
+    print(f"{Fore.CYAN}Hidden File and Directory Scanner{Fore.RESET}")
+    print("-" * 50)
+    target_url = input(f"{Fore.YELLOW}Enter the target URL (e.g., https://example.com): {Fore.RESET}")
+    
+    if not target_url.startswith(('http://', 'https://')):
+        target_url = 'https://' + target_url
+    
+    scanner = DirectoryScanner(target_url)
     scanner.run()

@@ -3,61 +3,220 @@ import requests
 from generator import generate_wordlist
 import sys
 import time
+import argparse
+import threading
+from queue import Queue
+from urllib.parse import urljoin
+import json
+import re
+from colorama import init, Fore
+from typing import List, Dict, Set
+import concurrent.futures
+import signal
 
-def check_directory(url, word):
-    try:
-        full_url = f"{url.rstrip('/')}/{word}"
-        response = requests.get(full_url)
-        if response.status_code == 200:
-            return full_url
-    except requests.RequestException:
-        pass
-    return None
+init(autoreset=True)
 
-def enumerate_directories(url, wordlist_file="wordlist.txt"):
-    print(f"Starting directory enumeration for: {url}")
-    print("Generating wordlist...")
-    generate_wordlist(wordlist_file, word_count=1000, min_length=3, max_length=10)
-    
-    found_dirs = []
-    with open(wordlist_file, 'r') as file:
-        words = file.readlines()
-        total = len(words)
+class DirectoryEnumerator:
+    def __init__(self, url: str, options: Dict):
+        self.url = url.rstrip('/')
+        self.options = options
+        self.found_paths: Set[str] = set()
+        self.queue = Queue()
+        self.session = requests.Session()
+        self.stop_scan = False
+        self.results = []
         
-        for i, word in enumerate(words, 1):
-            word = word.strip()
-            result = check_directory(url, word)
-            if result:
-                found_dirs.append(result)
-                print(f"\nFound directory: {result}")
+        # Set up authentication if provided
+        if options.get('auth'):
+            username, password = options['auth'].split(':')
+            self.session.auth = (username, password)
             
-            # Progress indicator
-            sys.stdout.write(f"\rProgress: {i}/{total} ({(i/total)*100:.1f}%)")
-            sys.stdout.flush()
-            time.sleep(0.1)  # Delay to prevent overwhelming the server
-    
-    return found_dirs
+        # Set up custom headers
+        if options.get('headers'):
+            self.session.headers.update(options['headers'])
+            
+        signal.signal(signal.SIGINT, self.handle_interrupt)
+
+    def handle_interrupt(self, signum, frame):
+        print(f"\n{Fore.YELLOW}[!] Stopping scan gracefully...")
+        self.stop_scan = True
+
+    def check_directory(self, path: str) -> dict:
+        if self.stop_scan:
+            return None
+
+        methods = self.options.get('methods', ['GET'])
+        extensions = self.options.get('extensions', [''])
+        results = []
+
+        for method in methods:
+            for ext in extensions:
+                if ext and not path.endswith(ext):
+                    full_path = f"{path}{ext}"
+                else:
+                    full_path = path
+
+                full_url = urljoin(self.url, full_path.lstrip('/'))
+                
+                try:
+                    response = self.session.request(
+                        method=method,
+                        url=full_url,
+                        allow_redirects=self.options.get('follow_redirects', False),
+                        timeout=self.options.get('timeout', 10),
+                        verify=self.options.get('verify_ssl', True)
+                    )
+                    
+                    status_code = response.status_code
+                    
+                    if self.should_report(status_code, response):
+                        result = {
+                            'url': full_url,
+                            'method': method,
+                            'status': status_code,
+                            'size': len(response.content),
+                            'words': len(response.text.split()),
+                            'lines': len(response.text.splitlines())
+                        }
+                        
+                        if self.options.get('pattern'):
+                            result['pattern_match'] = bool(re.search(self.options['pattern'], response.text))
+                            
+                        results.append(result)
+                        
+                        # Handle recursive scanning
+                        if self.options.get('recursive') and status_code == 200 and full_path not in self.found_paths:
+                            self.found_paths.add(full_path)
+                            self.queue_paths(full_path)
+                            
+                except requests.RequestException:
+                    continue
+
+        return results[0] if results else None
+
+    def should_report(self, status_code: int, response) -> bool:
+        status_codes = self.options.get('status_codes', [200, 204, 301, 302, 307, 401, 403])
+        
+        if status_code not in status_codes:
+            return False
+            
+        if self.options.get('size_filter'):
+            if len(response.content) == self.options['size_filter']:
+                return False
+                
+        return True
+
+    def queue_paths(self, base_path: str = '') -> None:
+        with open(self.options['wordlist'], 'r') as f:
+            for word in f:
+                if self.stop_scan:
+                    break
+                word = word.strip()
+                if base_path:
+                    path = f"{base_path}/{word}"
+                else:
+                    path = word
+                self.queue.put(path)
+
+    def scan_worker(self) -> None:
+        while True:
+            if self.stop_scan:
+                break
+                
+            try:
+                path = self.queue.get_nowait()
+            except Queue.Empty:
+                break
+
+            result = self.check_directory(path)
+            if result:
+                self.results.append(result)
+                self.print_result(result)
+            
+            self.queue.task_done()
+
+    def print_result(self, result: dict) -> None:
+        status_colors = {
+            200: Fore.GREEN,
+            301: Fore.BLUE,
+            302: Fore.BLUE,
+            401: Fore.RED,
+            403: Fore.RED
+        }
+        
+        color = status_colors.get(result['status'], Fore.WHITE)
+        print(f"{color}[{result['status']}] {result['method']} {result['url']} ({result['size']} bytes)")
+
+    def save_results(self) -> None:
+        if not self.results:
+            return
+            
+        output_format = self.options.get('output_format', 'txt')
+        filename = f"gobuster_results.{output_format}"
+        
+        if output_format == 'json':
+            with open(filename, 'w') as f:
+                json.dump(self.results, f, indent=2)
+        else:
+            with open(filename, 'w') as f:
+                for result in self.results:
+                    f.write(f"{result['status']} {result['method']} {result['url']}\n")
+
+    def run(self) -> None:
+        print(f"\n{Fore.CYAN}Directory Enumeration Tool (Advanced)")
+        print("=" * 50)
+        
+        print(f"\n{Fore.YELLOW}[*] Target URL: {self.url}")
+        print(f"[*] Threads: {self.options.get('threads', 10)}")
+        print(f"[*] Wordlist: {self.options['wordlist']}")
+        
+        self.queue_paths()
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.options.get('threads', 10)) as executor:
+            workers = [executor.submit(self.scan_worker) for _ in range(self.options.get('threads', 10))]
+            concurrent.futures.wait(workers)
+            
+        if self.options.get('output_format'):
+            self.save_results()
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python main.py <url>")
-        print("Example: python main.py https://example.com")
-        sys.exit(1)
-
-    url = sys.argv[1]
-    print("\nDirectory Enumeration Tool")
-    print("=" * 30)
+    parser = argparse.ArgumentParser(description='Advanced Directory Enumeration Tool')
+    parser.add_argument('url', help='Target URL')
+    parser.add_argument('-w', '--wordlist', default='wordlist.txt', help='Path to wordlist')
+    parser.add_argument('-t', '--threads', type=int, default=10, help='Number of threads')
+    parser.add_argument('-m', '--methods', nargs='+', default=['GET'], help='HTTP methods to use')
+    parser.add_argument('-x', '--extensions', nargs='+', help='File extensions to check')
+    parser.add_argument('-s', '--status-codes', nargs='+', type=int, help='Status codes to report')
+    parser.add_argument('-r', '--recursive', action='store_true', help='Enable recursive scanning')
+    parser.add_argument('-p', '--pattern', help='Pattern to match in responses')
+    parser.add_argument('-o', '--output', choices=['txt', 'json'], help='Output format')
+    parser.add_argument('-a', '--auth', help='Basic auth (username:password)')
+    parser.add_argument('--headers', nargs='+', help='Custom headers (key:value)')
     
-    found = enumerate_directories(url)
+    args = parser.parse_args()
     
-    print("\n\nResults:")
-    print("=" * 30)
-    if found:
-        print("Found directories:")
-        for directory in found:
-            print(f"- {directory}")
-    else:
-        print("No directories found.")
+    # Generate wordlist if it doesn't exist
+    if not os.path.exists(args.wordlist):
+        print("Generating wordlist...")
+        generate_wordlist(args.wordlist, word_count=1000, min_length=3, max_length=10)
+    
+    options = {
+        'wordlist': args.wordlist,
+        'threads': args.threads,
+        'methods': args.methods,
+        'extensions': args.extensions,
+        'status_codes': args.status_codes,
+        'recursive': args.recursive,
+        'pattern': args.pattern,
+        'output_format': args.output,
+        'auth': args.auth
+    }
+    
+    if args.headers:
+        options['headers'] = dict(h.split(':') for h in args.headers)
+    
+    enumerator = DirectoryEnumerator(args.url, options)
+    enumerator.run()
 
 if __name__ == "__main__":
     main()

@@ -48,23 +48,55 @@ class GoBusterWrapper:
     def check_directory(self, path: str) -> dict:
         if self.stop_scan:
             return None
-            
+
         def analyze_response(resp):
+        # Auto-updating fingerprints from response analysis
             fingerprints = {
-                'wordpress': ['wp-content', 'wp-includes'],
-                'joomla': ['com_content', 'mod_'],
-                'drupal': ['drupal.js', 'drupal.min.js'],
-                'apache': ['Apache/', 'httpd'],
-                'nginx': ['nginx'],
-                'php': ['X-Powered-By: PHP'],
-                'laravel': ['laravel_session'],
-                'rails': ['_rails_']
+                'wordpress': ['wp-content', 'wp-includes', 'wp-json'],
+                'joomla': ['com_content', 'mod_', 'joomla.javascript'],
+                'drupal': ['drupal.js', 'drupal.min.js', 'drupal-settings'],
+                'apache': ['Apache/', 'httpd', 'mod_perl', 'mod_ssl'],
+                'nginx': ['nginx', 'openresty', 'tengine'],
+                'php': ['X-Powered-By: PHP', 'PHPSESSID', '.php'],
+                'laravel': ['laravel_session', 'laravel-token', 'laravel.js'],
+                'rails': ['_rails_', 'rails-ujs', 'rails.js'],
+                'node': ['node_modules', 'express', 'nextjs'],
+                'django': ['django-admin', 'csrftoken', 'djangojs'],
+                'react': ['react.development.js', 'react.production.min.js'],
+                'vue': ['vue.js', 'vue.min.js', 'vue-router'],
+                'angular': ['angular.js', 'ng-app', 'ng-controller'],
+                'database': ['mysql', 'postgresql', 'mongodb', 'oracle', 'redis'],
+                'cdn': ['cloudflare', 'akamai', 'fastly', 'cloudfront'],
+                'analytics': ['google-analytics', 'hotjar', 'mixpanel'],
+                'security': ['waf', 'captcha', 'recaptcha', 'hcaptcha']
             }
-            
+
+            # Dynamic pattern learning
+            headers = str(resp.headers).lower()
+            body = resp.text.lower()
+
+            # Auto-detect new patterns
+            new_patterns = set()
+
+            # Version detection
+            version_pattern = r'(?:v|version|ver)[.-]?\s*([0-9]+(?:\.[0-9]+)*)'
+            versions = re.findall(version_pattern, body + headers)
+
+            # Framework detection from common paths
+            common_paths = ['/api', '/admin', '/login', '/dashboard']
+
             detected = []
             for tech, patterns in fingerprints.items():
-                if any(p in resp.text or p in str(resp.headers) for p in patterns):
+                if any(p.lower() in (body + headers) for p in patterns):
                     detected.append(tech)
+                    # Learn new patterns
+                    context = body[max(0, body.find(tech)-50):body.find(tech)+50]
+                    new_patterns.update(re.findall(r'[\w-]+\.[\w-]+', context))
+
+            # Update fingerprints with new patterns
+            if new_patterns:
+                fingerprints['custom'] = list(new_patterns)
+
             return detected
 
         methods = self.options.get('methods', ['GET'])
@@ -310,7 +342,7 @@ def main():
     args = parser.parse_args()
 
     options = vars(args)
-    
+
     # Handle "all" extensions option
     if options.get('extensions') and 'all' in options['extensions']:
         options['extensions'] = [
@@ -322,7 +354,7 @@ def main():
             '.html.old', '.html.bak', '.htm.old', '.htm.bak', '.txt.old',
             '.inc', '.inc.php', '.inc.old', '.inc.bak', '.sql.gz', '.sql.bz2'
         ]
-    
+
     scanner = GoBusterWrapper(args.url, options)
     scanner.run()
 

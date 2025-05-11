@@ -25,21 +25,20 @@ def generate_random_word(length: int, include_numbers: bool = False, include_spe
                 'password', 'reset', 'config', 'setup', 'install', 'update',
                 'backup', 'logs', 'stats', 'admin', 'test', 'dev', 'staging']
 
-    # 80% chance to use pattern-based generation
-    if random.random() < 0.8:
+    # 95% chance to use pattern-based generation
+    if random.random() < 0.95:
         category = random.choice(list(patterns.keys()))
         base_word = random.choice(patterns[category])
 
-        # Apply transformations
+        # Use more focused transformations
         transformations = [
             lambda x: x,  # no change
-            lambda x: x.upper(),
             lambda x: x.lower(),
-            lambda x: x + str(random.randint(1, 9999)),
-            lambda x: x + random.choice(['_old', '_bak', '_tmp', '_new']),
-            lambda x: '.' + x,
+            lambda x: x + str(random.randint(1, 999)),
+            lambda x: x + '_' + random.choice(['backup', 'old', 'tmp', 'dev']),
+            lambda x: x + random.choice(['.php', '.html', '.asp', '.jsp']),
             lambda x: '_' + x,
-            lambda x: x + random.choice(['.php', '.asp', '.jsp', '.html'])
+            lambda x: x + '_' + str(random.randint(2020, 2024))
         ]
 
         return random.choice(transformations)(base_word)

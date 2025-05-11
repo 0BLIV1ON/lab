@@ -46,7 +46,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python generator.py --count 10000 --numbers --special"
+args = "python generator.py --count 10000 --numbers"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

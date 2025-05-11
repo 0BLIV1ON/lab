@@ -14,10 +14,12 @@ from colorama import init, Fore
 from typing import List, Dict, Set
 import concurrent.futures
 import signal
+import subprocess
+import platform
 
 init(autoreset=True)
 
-class DirectoryEnumerator:
+class GoBusterWrapper:
     def __init__(self, url: str, options: Dict):
         self.url = url.rstrip('/')
         self.options = options
@@ -77,7 +79,8 @@ class DirectoryEnumerator:
                             'status': status_code,
                             'size': len(response.content),
                             'words': len(response.text.split()),
-                            'lines': len(response.text.splitlines())
+                            'lines': len(response.text.splitlines()),
+                            'title': self.extract_title(response.text) if response.headers.get('content-type', '').startswith('text/html') else None
                         }
                         
                         if self.options.get('pattern'):
@@ -95,6 +98,10 @@ class DirectoryEnumerator:
 
         return results[0] if results else None
 
+    def extract_title(self, html_content: str) -> str:
+        match = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE|re.DOTALL)
+        return match.group(1).strip() if match else ''
+
     def should_report(self, status_code: int, response) -> bool:
         status_codes = self.options.get('status_codes', [200, 204, 301, 302, 307, 401, 403])
         
@@ -104,11 +111,20 @@ class DirectoryEnumerator:
         if self.options.get('size_filter'):
             if len(response.content) == self.options['size_filter']:
                 return False
+        
+        if self.options.get('exclude_length'):
+            if len(response.content) == self.options.get('exclude_length'):
+                return False
                 
         return True
 
     def queue_paths(self, base_path: str = '') -> None:
-        with open(self.options['wordlist'], 'r') as f:
+        wordlist = self.options.get('wordlist', 'wordlist.txt')
+        if not os.path.exists(wordlist):
+            print(f"{Fore.YELLOW}[!] Generating wordlist...")
+            generate_wordlist(wordlist)
+            
+        with open(wordlist, 'r') as f:
             for word in f:
                 if self.stop_scan:
                     break
@@ -146,7 +162,12 @@ class DirectoryEnumerator:
         }
         
         color = status_colors.get(result['status'], Fore.WHITE)
-        print(f"{color}[{result['status']}] {result['method']} {result['url']} ({result['size']} bytes)")
+        output = f"{color}[{result['status']}] {result['method']} {result['url']} ({result['size']} bytes)"
+        
+        if result.get('title'):
+            output += f" - {result['title']}"
+            
+        print(output)
 
     def save_results(self) -> None:
         if not self.results:
@@ -164,12 +185,14 @@ class DirectoryEnumerator:
                     f.write(f"{result['status']} {result['method']} {result['url']}\n")
 
     def run(self) -> None:
-        print(f"\n{Fore.CYAN}Directory Enumeration Tool (Advanced)")
+        print(f"\n{Fore.CYAN}GoBuster Python Implementation")
         print("=" * 50)
         
         print(f"\n{Fore.YELLOW}[*] Target URL: {self.url}")
         print(f"[*] Threads: {self.options.get('threads', 10)}")
         print(f"[*] Wordlist: {self.options['wordlist']}")
+        if self.options.get('extensions'):
+            print(f"[*] Extensions: {', '.join(self.options['extensions'])}")
         
         self.queue_paths()
         
@@ -181,7 +204,7 @@ class DirectoryEnumerator:
             self.save_results()
 
 def main():
-    parser = argparse.ArgumentParser(description='Advanced Directory Enumeration Tool')
+    parser = argparse.ArgumentParser(description='Advanced Directory/File Enumeration Tool')
     parser.add_argument('url', help='Target URL')
     parser.add_argument('-w', '--wordlist', default='wordlist.txt', help='Path to wordlist')
     parser.add_argument('-t', '--threads', type=int, default=10, help='Number of threads')
@@ -193,31 +216,16 @@ def main():
     parser.add_argument('-o', '--output', choices=['txt', 'json'], help='Output format')
     parser.add_argument('-a', '--auth', help='Basic auth (username:password)')
     parser.add_argument('--headers', nargs='+', help='Custom headers (key:value)')
+    parser.add_argument('--exclude-length', type=int, help='Exclude responses of specific length')
+    parser.add_argument('--follow-redirects', action='store_true', help='Follow redirects')
+    parser.add_argument('--no-tls-validation', action='store_true', help='Skip TLS certificate validation')
+    parser.add_argument('--timeout', type=int, default=10, help='Request timeout in seconds')
     
     args = parser.parse_args()
     
-    # Generate wordlist if it doesn't exist
-    if not os.path.exists(args.wordlist):
-        print("Generating wordlist...")
-        generate_wordlist(args.wordlist, word_count=1000, min_length=3, max_length=10)
-    
-    options = {
-        'wordlist': args.wordlist,
-        'threads': args.threads,
-        'methods': args.methods,
-        'extensions': args.extensions,
-        'status_codes': args.status_codes,
-        'recursive': args.recursive,
-        'pattern': args.pattern,
-        'output_format': args.output,
-        'auth': args.auth
-    }
-    
-    if args.headers:
-        options['headers'] = dict(h.split(':') for h in args.headers)
-    
-    enumerator = DirectoryEnumerator(args.url, options)
-    enumerator.run()
+    options = vars(args)
+    scanner = GoBusterWrapper(args.url, options)
+    scanner.run()
 
 if __name__ == "__main__":
     main()

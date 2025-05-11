@@ -248,7 +248,7 @@ def main():
     parser.add_argument('-x',
                         '--extensions',
                         nargs='+',
-                        help='File extensions to check')
+                        help='File extensions to check (use "all" for common web extensions)')
     parser.add_argument('-s',
                         '--status-codes',
                         nargs='+',
@@ -286,6 +286,15 @@ def main():
     args = parser.parse_args()
 
     options = vars(args)
+    
+    # Handle "all" extensions option
+    if options.get('extensions') and 'all' in options['extensions']:
+        options['extensions'] = [
+            '.php', '.html', '.htm', '.js', '.css', '.txt', '.pdf', '.json', 
+            '.xml', '.asp', '.aspx', '.jsp', '.sql', '.zip', '.tar.gz', '.tgz',
+            '.doc', '.docx', '.xls', '.xlsx', '.conf', '.bak', '.backup', '.swp'
+        ]
+    
     scanner = GoBusterWrapper(args.url, options)
     scanner.run()
 

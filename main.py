@@ -209,15 +209,20 @@ class GoBusterWrapper:
 
             try:
                 path = self.queue.get_nowait()
+                print(f"\r{Fore.CYAN}[*] Scanning: {path:<50}", end='')
+                sys.stdout.flush()
+                
+                result = self.check_directory(path)
+                if result:
+                    self.results.append(result)
+                    self.print_result(result)
+
+                self.queue.task_done()
             except Queue.Empty:
                 break
-
-            result = self.check_directory(path)
-            if result:
-                self.results.append(result)
-                self.print_result(result)
-
-            self.queue.task_done()
+            except Exception as e:
+                print(f"\n{Fore.RED}[!] Error scanning {path}: {str(e)}")
+                self.queue.task_done()
 
     def print_result(self, result: dict) -> None:
         status_colors = {
@@ -229,12 +234,15 @@ class GoBusterWrapper:
         }
 
         color = status_colors.get(result['status'], Fore.WHITE)
-        output = f"{color}[{result['status']}] {result['method']} {result['url']} ({result['size']} bytes)"
+        output = f"\n{color}[+] Found: [{result['status']}] {result['method']} {result['url']} ({result['size']} bytes)"
 
         if result.get('title'):
-            output += f" - {result['title']}"
-
+            output += f"\n    Title: {result['title']}"
+        if result.get('pattern_match'):
+            output += f"\n    Pattern matched!"
+            
         print(output)
+        sys.stdout.flush()
 
     def save_results(self) -> None:
         if not self.results:

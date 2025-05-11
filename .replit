@@ -17,4 +17,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py https://example.com"
+args = "python main.py https://example.com -x .php .html .txt -t 20 -m GET POST"

@@ -42,3 +42,6 @@ You can customize the wordlist generation by altering the parameters in generato
 
 ## Contributing
 Feel free to submit pull requests or report issues.
+
+## License
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/barryjensen-dev/lab/LICENSE) file for details.

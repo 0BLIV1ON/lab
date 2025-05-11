@@ -1,4 +1,5 @@
 
+import os
 import requests
 from generator import generate_wordlist
 import sys

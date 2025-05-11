@@ -48,6 +48,24 @@ class GoBusterWrapper:
     def check_directory(self, path: str) -> dict:
         if self.stop_scan:
             return None
+            
+        def analyze_response(resp):
+            fingerprints = {
+                'wordpress': ['wp-content', 'wp-includes'],
+                'joomla': ['com_content', 'mod_'],
+                'drupal': ['drupal.js', 'drupal.min.js'],
+                'apache': ['Apache/', 'httpd'],
+                'nginx': ['nginx'],
+                'php': ['X-Powered-By: PHP'],
+                'laravel': ['laravel_session'],
+                'rails': ['_rails_']
+            }
+            
+            detected = []
+            for tech, patterns in fingerprints.items():
+                if any(p in resp.text or p in str(resp.headers) for p in patterns):
+                    detected.append(tech)
+            return detected
 
         methods = self.options.get('methods', ['GET'])
         extensions = self.options.get('extensions', [''])

@@ -10,7 +10,7 @@ packages = ["gobuster"]
 run = ["sh", "-c", "gobuster dir -u https://example.com -w wordlist.txt"]
 
 [workflows]
-runButton = "GoBuster Scan"
+runButton = "Advanced Deep Scan"
 
 [[workflows.workflow]]
 name = "Directory Enum"
@@ -38,3 +38,16 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python main.py https://example.com -x all -t 10 -r --deep --fuzzy -m GET,HEAD,POST -o json"
+
+[[workflows.workflow]]
+name = "Advanced Deep Scan"
+author = 16578131
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python generator.py --count 10000 --numbers --special"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py https://example.com -x all -t 50 -r --deep --fuzzy -m GET,HEAD,POST,PUT,OPTIONS -o json --follow-redirects --pattern \"password|key|secret|token\" --timeout 30"

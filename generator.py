@@ -6,9 +6,38 @@ from typing import List, Set
 import os
 
 def generate_random_word(length: int, include_numbers: bool = False, include_special: bool = False) -> str:
-    """Generate a random word of a given length with optional numbers and special characters."""
-    # Common real words that are often used in web directories
-    real_words = ['admin', 'login', 'dashboard', 'profile', 'settings', 'upload', 
+    """Generate a random word with advanced patterns."""
+    patterns = {
+        'admin': ['adm1n', 'admin_', '_admin', 'administrator', '@dmin'],
+        'backup': ['bak', '.bak', '_backup', '.old', '.save', '~'],
+        'config': ['conf', 'cfg', '.ini', '.env', '.config', '_config'],
+        'test': ['test', 'testing', 'dev', 'stage', 'staging', 'uat'],
+        'debug': ['dbg', 'debug', 'console', 'terminal', 'shell'],
+        'upload': ['upl', 'upload', 'uploads', 'media', 'files'],
+        'api': ['api', 'rest', 'v1', 'v2', 'v3', 'graphql', 'gql'],
+        'auth': ['auth', 'login', 'signin', 'signup', 'register'],
+        'cms': ['wp', 'wordpress', 'joomla', 'drupal', 'moodle'],
+        'db': ['mysql', 'pgsql', 'oracle', 'mongodb', 'redis']
+    }
+    
+    # 80% chance to use pattern-based generation
+    if random.random() < 0.8:
+        category = random.choice(list(patterns.keys()))
+        base_word = random.choice(patterns[category])
+        
+        # Apply transformations
+        transformations = [
+            lambda x: x,  # no change
+            lambda x: x.upper(),
+            lambda x: x.lower(),
+            lambda x: x + str(random.randint(1, 9999)),
+            lambda x: x + random.choice(['_old', '_bak', '_tmp', '_new']),
+            lambda x: '.' + x,
+            lambda x: '_' + x,
+            lambda x: x + random.choice(['.php', '.asp', '.jsp', '.html'])
+        ]
+        
+        return random.choice(transformations)(base_word) 
                   'images', 'media', 'blog', 'posts', 'users', 'api', 'docs',
                   'help', 'support', 'about', 'contact', 'search', 'register',
                   'password', 'reset', 'config', 'setup', 'install', 'update',

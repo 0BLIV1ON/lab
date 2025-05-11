@@ -4,16 +4,16 @@ import argparse
 from typing import List, Set
 import os
 
+
 def generate_common_paths() -> List[str]:
     """Generate a list of common web directories and files"""
     common_dirs = [
         'admin', 'administrator', 'backup', 'backups', 'bin', 'cache',
-        'config', 'conf', 'core', 'data', 'database', 'db', 'debug',
-        'dev', 'development', 'files', 'home', 'img', 'images',
-        'includes', 'js', 'lib', 'libs', 'log', 'logs', 'media',
-        'old', 'private', 'pub', 'public', 'scripts', 'secure',
-        'security', 'services', 'src', 'system', 'temp', 'test',
-        'tests', 'tmp', 'upload', 'uploads', 'util', 'utils',
+        'config', 'conf', 'core', 'data', 'database', 'db', 'debug', 'dev',
+        'development', 'files', 'home', 'img', 'images', 'includes', 'js',
+        'lib', 'libs', 'log', 'logs', 'media', 'old', 'private', 'pub',
+        'public', 'scripts', 'secure', 'security', 'services', 'src', 'system',
+        'temp', 'test', 'tests', 'tmp', 'upload', 'uploads', 'util', 'utils',
         'web', 'website', 'wp-admin', 'wp-content', 'wp-includes'
     ]
 
@@ -21,9 +21,9 @@ def generate_common_paths() -> List[str]:
         'admin.php', 'backup.sql', 'config.php', 'connection.php',
         'database.sql', 'db.php', 'error.log', 'index.php', 'info.php',
         'install.php', 'login.php', 'phpinfo.php', 'robots.txt',
-        'server-status', 'test.php', 'web.config', '.htaccess',
-        '.env', '.git/HEAD', '.svn/', '.DS_Store', 'sitemap.xml',
-        'wp-config.php', 'config.inc.php', 'configuration.php'
+        'server-status', 'test.php', 'web.config', '.htaccess', '.env',
+        '.git/HEAD', '.svn/', '.DS_Store', 'sitemap.xml', 'wp-config.php',
+        'config.inc.php', 'configuration.php'
     ]
 
     variations = []
@@ -45,9 +45,10 @@ def generate_common_paths() -> List[str]:
 
     return list(set(variations))
 
+
 def generate_wordlist(filename: str = "wordlist.txt",
-                     word_count: int = 1000,
-                     include_numbers: bool = False) -> None:
+                      word_count: int = 1000,
+                      include_numbers: bool = False) -> None:
     """Generate a comprehensive wordlist focused on web directories and files"""
     paths = generate_common_paths()
 
@@ -76,16 +77,25 @@ def generate_wordlist(filename: str = "wordlist.txt",
 
     print(f"Wordlist saved to {filename}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate a wordlist for directory enumeration')
-    parser.add_argument('-o', '--output', default='wordlist.txt', help='Output filename')
-    parser.add_argument('-c', '--count', type=int, default=1000, help='Number of words')
-    parser.add_argument('--numbers', action='store_true', help='Include number variations')
+    parser = argparse.ArgumentParser(
+        description='Generate a wordlist for directory enumeration')
+    parser.add_argument('-o',
+                        '--output',
+                        default='wordlist.txt',
+                        help='Output filename')
+    parser.add_argument('-c',
+                        '--count',
+                        type=int,
+                        default=1000,
+                        help='Number of words')
+    parser.add_argument('--numbers',
+                        action='store_true',
+                        help='Include number variations')
 
     args = parser.parse_args()
 
-    generate_wordlist(
-        filename=args.output,
-        word_count=args.count,
-        include_numbers=args.numbers
-    )
+    generate_wordlist(filename=args.output,
+                      word_count=args.count,
+                      include_numbers=args.numbers)

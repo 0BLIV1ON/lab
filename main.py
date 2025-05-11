@@ -1,4 +1,3 @@
-
 import os
 import requests
 from generator import generate_wordlist
@@ -19,7 +18,9 @@ import platform
 
 init(autoreset=True)
 
+
 class GoBusterWrapper:
+
     def __init__(self, url: str, options: Dict):
         self.url = url.rstrip('/')
         self.options = options
@@ -28,16 +29,16 @@ class GoBusterWrapper:
         self.session = requests.Session()
         self.stop_scan = False
         self.results = []
-        
+
         # Set up authentication if provided
         if options.get('auth'):
             username, password = options['auth'].split(':')
             self.session.auth = (username, password)
-            
+
         # Set up custom headers
         if options.get('headers'):
             self.session.headers.update(options['headers'])
-            
+
         signal.signal(signal.SIGINT, self.handle_interrupt)
 
     def handle_interrupt(self, signum, frame):
@@ -60,62 +61,78 @@ class GoBusterWrapper:
                     full_path = path
 
                 full_url = urljoin(self.url, full_path.lstrip('/'))
-                
+
                 try:
                     response = self.session.request(
                         method=method,
                         url=full_url,
-                        allow_redirects=self.options.get('follow_redirects', False),
+                        allow_redirects=self.options.get(
+                            'follow_redirects', False),
                         timeout=self.options.get('timeout', 10),
-                        verify=self.options.get('verify_ssl', True)
-                    )
-                    
+                        verify=self.options.get('verify_ssl', True))
+
                     status_code = response.status_code
-                    
+
                     if self.should_report(status_code, response):
                         result = {
-                            'url': full_url,
-                            'method': method,
-                            'status': status_code,
-                            'size': len(response.content),
-                            'words': len(response.text.split()),
-                            'lines': len(response.text.splitlines()),
-                            'title': self.extract_title(response.text) if response.headers.get('content-type', '').startswith('text/html') else None
+                            'url':
+                            full_url,
+                            'method':
+                            method,
+                            'status':
+                            status_code,
+                            'size':
+                            len(response.content),
+                            'words':
+                            len(response.text.split()),
+                            'lines':
+                            len(response.text.splitlines()),
+                            'title':
+                            self.extract_title(
+                                response.text) if response.headers.get(
+                                    'content-type', '').startswith('text/html')
+                            else None
                         }
-                        
+
                         if self.options.get('pattern'):
-                            result['pattern_match'] = bool(re.search(self.options['pattern'], response.text))
-                            
+                            result['pattern_match'] = bool(
+                                re.search(self.options['pattern'],
+                                          response.text))
+
                         results.append(result)
-                        
+
                         # Handle recursive scanning
-                        if self.options.get('recursive') and status_code == 200 and full_path not in self.found_paths:
+                        if self.options.get(
+                                'recursive'
+                        ) and status_code == 200 and full_path not in self.found_paths:
                             self.found_paths.add(full_path)
                             self.queue_paths(full_path)
-                            
+
                 except requests.RequestException:
                     continue
 
         return results[0] if results else None
 
     def extract_title(self, html_content: str) -> str:
-        match = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE|re.DOTALL)
+        match = re.search(r'<title>(.*?)</title>', html_content,
+                          re.IGNORECASE | re.DOTALL)
         return match.group(1).strip() if match else ''
 
     def should_report(self, status_code: int, response) -> bool:
-        status_codes = self.options.get('status_codes', [200, 204, 301, 302, 307, 401, 403])
-        
+        status_codes = self.options.get('status_codes',
+                                        [200, 204, 301, 302, 307, 401, 403])
+
         if status_code not in status_codes:
             return False
-            
+
         if self.options.get('size_filter'):
             if len(response.content) == self.options['size_filter']:
                 return False
-        
+
         if self.options.get('exclude_length'):
             if len(response.content) == self.options.get('exclude_length'):
                 return False
-                
+
         return True
 
     def queue_paths(self, base_path: str = '') -> None:
@@ -123,7 +140,7 @@ class GoBusterWrapper:
         if not os.path.exists(wordlist):
             print(f"{Fore.YELLOW}[!] Generating wordlist...")
             generate_wordlist(wordlist)
-            
+
         with open(wordlist, 'r') as f:
             for word in f:
                 if self.stop_scan:
@@ -139,7 +156,7 @@ class GoBusterWrapper:
         while True:
             if self.stop_scan:
                 break
-                
+
             try:
                 path = self.queue.get_nowait()
             except Queue.Empty:
@@ -149,7 +166,7 @@ class GoBusterWrapper:
             if result:
                 self.results.append(result)
                 self.print_result(result)
-            
+
             self.queue.task_done()
 
     def print_result(self, result: dict) -> None:
@@ -160,72 +177,118 @@ class GoBusterWrapper:
             401: Fore.RED,
             403: Fore.RED
         }
-        
+
         color = status_colors.get(result['status'], Fore.WHITE)
         output = f"{color}[{result['status']}] {result['method']} {result['url']} ({result['size']} bytes)"
-        
+
         if result.get('title'):
             output += f" - {result['title']}"
-            
+
         print(output)
 
     def save_results(self) -> None:
         if not self.results:
             return
-            
+
         output_format = self.options.get('output_format', 'txt')
         filename = f"gobuster_results.{output_format}"
-        
+
         if output_format == 'json':
             with open(filename, 'w') as f:
                 json.dump(self.results, f, indent=2)
         else:
             with open(filename, 'w') as f:
                 for result in self.results:
-                    f.write(f"{result['status']} {result['method']} {result['url']}\n")
+                    f.write(
+                        f"{result['status']} {result['method']} {result['url']}\n"
+                    )
 
     def run(self) -> None:
         print(f"\n{Fore.CYAN}GoBuster Python Implementation")
         print("=" * 50)
-        
+
         print(f"\n{Fore.YELLOW}[*] Target URL: {self.url}")
         print(f"[*] Threads: {self.options.get('threads', 10)}")
         print(f"[*] Wordlist: {self.options['wordlist']}")
         if self.options.get('extensions'):
             print(f"[*] Extensions: {', '.join(self.options['extensions'])}")
-        
+
         self.queue_paths()
-        
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.options.get('threads', 10)) as executor:
-            workers = [executor.submit(self.scan_worker) for _ in range(self.options.get('threads', 10))]
+
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=self.options.get('threads', 10)) as executor:
+            workers = [
+                executor.submit(self.scan_worker)
+                for _ in range(self.options.get('threads', 10))
+            ]
             concurrent.futures.wait(workers)
-            
+
         if self.options.get('output_format'):
             self.save_results()
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Advanced Directory/File Enumeration Tool')
+    parser = argparse.ArgumentParser(
+        description='Advanced Directory/File Enumeration Tool')
     parser.add_argument('url', help='Target URL')
-    parser.add_argument('-w', '--wordlist', default='wordlist.txt', help='Path to wordlist')
-    parser.add_argument('-t', '--threads', type=int, default=10, help='Number of threads')
-    parser.add_argument('-m', '--methods', nargs='+', default=['GET'], help='HTTP methods to use')
-    parser.add_argument('-x', '--extensions', nargs='+', help='File extensions to check')
-    parser.add_argument('-s', '--status-codes', nargs='+', type=int, help='Status codes to report')
-    parser.add_argument('-r', '--recursive', action='store_true', help='Enable recursive scanning')
-    parser.add_argument('-p', '--pattern', help='Pattern to match in responses')
-    parser.add_argument('-o', '--output', choices=['txt', 'json'], help='Output format')
+    parser.add_argument('-w',
+                        '--wordlist',
+                        default='wordlist.txt',
+                        help='Path to wordlist')
+    parser.add_argument('-t',
+                        '--threads',
+                        type=int,
+                        default=10,
+                        help='Number of threads')
+    parser.add_argument('-m',
+                        '--methods',
+                        nargs='+',
+                        default=['GET'],
+                        help='HTTP methods to use')
+    parser.add_argument('-x',
+                        '--extensions',
+                        nargs='+',
+                        help='File extensions to check')
+    parser.add_argument('-s',
+                        '--status-codes',
+                        nargs='+',
+                        type=int,
+                        help='Status codes to report')
+    parser.add_argument('-r',
+                        '--recursive',
+                        action='store_true',
+                        help='Enable recursive scanning')
+    parser.add_argument('-p',
+                        '--pattern',
+                        help='Pattern to match in responses')
+    parser.add_argument('-o',
+                        '--output',
+                        choices=['txt', 'json'],
+                        help='Output format')
     parser.add_argument('-a', '--auth', help='Basic auth (username:password)')
-    parser.add_argument('--headers', nargs='+', help='Custom headers (key:value)')
-    parser.add_argument('--exclude-length', type=int, help='Exclude responses of specific length')
-    parser.add_argument('--follow-redirects', action='store_true', help='Follow redirects')
-    parser.add_argument('--no-tls-validation', action='store_true', help='Skip TLS certificate validation')
-    parser.add_argument('--timeout', type=int, default=10, help='Request timeout in seconds')
-    
+    parser.add_argument('--headers',
+                        nargs='+',
+                        help='Custom headers (key:value)')
+    parser.add_argument('--exclude-length',
+                        type=int,
+                        help='Exclude responses of specific length')
+    parser.add_argument('--follow-redirects',
+                        action='store_true',
+                        help='Follow redirects')
+    parser.add_argument('--no-tls-validation',
+                        action='store_true',
+                        help='Skip TLS certificate validation')
+    parser.add_argument('--timeout',
+                        type=int,
+                        default=10,
+                        help='Request timeout in seconds')
+
     args = parser.parse_args()
-    
+
     options = vars(args)
     scanner = GoBusterWrapper(args.url, options)
     scanner.run()
+
 
 if __name__ == "__main__":
     main()

@@ -4,100 +4,75 @@ import argparse
 from typing import List, Set
 import os
 
-def generate_random_word(length: int, include_numbers: bool = False, include_special: bool = False) -> str:
-    """Generate a random word with advanced patterns."""
-    patterns = {
-        'admin': ['adm1n', 'admin_', '_admin', 'administrator', '@dmin'],
-        'backup': ['bak', '.bak', '_backup', '.old', '.save', '~'],
-        'config': ['conf', 'cfg', '.ini', '.env', '.config', '_config'],
-        'test': ['test', 'testing', 'dev', 'stage', 'staging', 'uat'],
-        'debug': ['dbg', 'debug', 'console', 'terminal', 'shell'],
-        'upload': ['upl', 'upload', 'uploads', 'media', 'files'],
-        'api': ['api', 'rest', 'v1', 'v2', 'v3', 'graphql', 'gql'],
-        'auth': ['auth', 'login', 'signin', 'signup', 'register'],
-        'cms': ['wp', 'wordpress', 'joomla', 'drupal', 'moodle'],
-        'db': ['mysql', 'pgsql', 'oracle', 'mongodb', 'redis']
-    }
+def generate_common_paths() -> List[str]:
+    """Generate a list of common web directories and files"""
+    common_dirs = [
+        'admin', 'administrator', 'backup', 'backups', 'bin', 'cache',
+        'config', 'conf', 'core', 'data', 'database', 'db', 'debug',
+        'dev', 'development', 'files', 'home', 'img', 'images',
+        'includes', 'js', 'lib', 'libs', 'log', 'logs', 'media',
+        'old', 'private', 'pub', 'public', 'scripts', 'secure',
+        'security', 'services', 'src', 'system', 'temp', 'test',
+        'tests', 'tmp', 'upload', 'uploads', 'util', 'utils',
+        'web', 'website', 'wp-admin', 'wp-content', 'wp-includes'
+    ]
 
-    real_words = ['admin', 'login', 'dashboard', 'profile', 'settings', 'upload',
-                'images', 'media', 'blog', 'posts', 'users', 'api', 'docs',
-                'help', 'support', 'about', 'contact', 'search', 'register',
-                'password', 'reset', 'config', 'setup', 'install', 'update',
-                'backup', 'logs', 'stats', 'admin', 'test', 'dev', 'staging']
+    common_files = [
+        'admin.php', 'backup.sql', 'config.php', 'connection.php',
+        'database.sql', 'db.php', 'error.log', 'index.php', 'info.php',
+        'install.php', 'login.php', 'phpinfo.php', 'robots.txt',
+        'server-status', 'test.php', 'web.config', '.htaccess',
+        '.env', '.git/HEAD', '.svn/', '.DS_Store', 'sitemap.xml',
+        'wp-config.php', 'config.inc.php', 'configuration.php'
+    ]
 
-    # 95% chance to use pattern-based generation
-    if random.random() < 0.95:
-        category = random.choice(list(patterns.keys()))
-        base_word = random.choice(patterns[category])
+    variations = []
+    for base in common_dirs:
+        variations.append(base)
+        variations.append(base + '/')
+        variations.append(base + '.old')
+        variations.append(base + '.bak')
+        variations.append(base + '_backup')
+        variations.append('.' + base)
+        variations.append('_' + base)
 
-        # Use more focused transformations
-        transformations = [
-            lambda x: x,  # no change
-            lambda x: x.lower(),
-            lambda x: x + str(random.randint(1, 999)),
-            lambda x: x + '_' + random.choice(['backup', 'old', 'tmp', 'dev']),
-            lambda x: x + random.choice(['.php', '.html', '.asp', '.jsp']),
-            lambda x: '_' + x,
-            lambda x: x + '_' + str(random.randint(2020, 2024))
-        ]
+    for file in common_files:
+        variations.append(file)
+        variations.append(file + '.bak')
+        variations.append(file + '.old')
+        variations.append(file + '~')
+        variations.append('.' + file)
 
-        return random.choice(transformations)(base_word)
-
-    # 70% chance to use a real word if it matches the length criteria
-    if random.random() < 0.7 and any(len(word) >= length and len(word) <= length for word in real_words):
-        suitable_words = [w for w in real_words if len(w) >= length and len(w) <= length]
-        return random.choice(suitable_words)
-
-    # Otherwise generate random string
-    chars = string.ascii_lowercase
-    if include_numbers:
-        chars += string.digits
-    if include_special:
-        chars += string.punctuation
-    return ''.join(random.choices(chars, k=length))
-
-def load_common_words(filename: str = "common_words.txt") -> Set[str]:
-    """Load common words from a file if it exists."""
-    common_words = set()
-    if os.path.exists(filename):
-        with open(filename, 'r') as f:
-            common_words = {line.strip() for line in f}
-    return common_words
+    return list(set(variations))
 
 def generate_wordlist(filename: str = "wordlist.txt",
                      word_count: int = 1000,
-                     min_length: int = 5,
-                     max_length: int = 12,
-                     include_numbers: bool = False,
-                     include_special: bool = False,
-                     include_common: bool = True) -> None:
-    """Generate a comprehensive wordlist with various options."""
-    common_dirs = {
-        'admin', 'administrator', 'wp-admin', 'cpanel', 'phpmyadmin',
-        'wp-content', 'wp-includes', 'administrator', 'joomla', 'drupal',
-        'dev', 'test', 'beta', 'staging', 'development', 'production',
-        'backup', 'backups', '.bak', '.backup', '.old', '.save', '.swap', '.swp',
-        'config', '.config', '.env', '.git', '.svn', 'log', 'logs', '.htaccess',
-        'upload', 'uploads', 'media', 'static', 'assets', 'files', 'private',
-        '.ssh', '.npm', '.tmp', '.temp', '.cache', '.hidden',
-        'api', 'rest', 'v1', 'v2', 'docs', 'documentation', 'sdk',
-        'phpinfo', 'server-status', 'server-info', '.well-known'
-    }
+                     include_numbers: bool = False) -> None:
+    """Generate a comprehensive wordlist focused on web directories and files"""
+    paths = generate_common_paths()
 
-    words = set()
+    # Add year-based variations
+    years = range(2020, 2025)
+    for path in paths[:]:
+        for year in years:
+            paths.append(f"{path}_{year}")
+            paths.append(f"{path}.{year}")
 
-    if include_common:
-        words.update(common_dirs)
+    # Add numeric variations if requested
+    if include_numbers:
+        for path in paths[:]:
+            for i in range(1, 6):
+                paths.append(f"{path}{i}")
+                paths.append(f"{path}_{i}")
 
-    while len(words) < word_count:
-        length = random.randint(min_length, max_length)
-        word = generate_random_word(length, include_numbers, include_special)
-        words.add(word)
+    # Ensure uniqueness and limit to requested count
+    final_paths = list(set(paths))[:word_count]
+    final_paths.sort()
 
-    print(f"Generating wordlist with {word_count} words...")
+    print(f"Generating wordlist with {len(final_paths)} words...")
     with open(filename, 'w') as file:
-        for word in sorted(words):
-            file.write(word + '\n')
+        for path in final_paths:
+            file.write(path + '\n')
 
     print(f"Wordlist saved to {filename}")
 
@@ -105,20 +80,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate a wordlist for directory enumeration')
     parser.add_argument('-o', '--output', default='wordlist.txt', help='Output filename')
     parser.add_argument('-c', '--count', type=int, default=1000, help='Number of words')
-    parser.add_argument('--min-length', type=int, default=5, help='Minimum word length')
-    parser.add_argument('--max-length', type=int, default=12, help='Maximum word length')
-    parser.add_argument('--numbers', action='store_true', help='Include numbers')
-    parser.add_argument('--special', action='store_true', help='Include special characters')
-    parser.add_argument('--no-common', action='store_true', help='Exclude common directory names')
+    parser.add_argument('--numbers', action='store_true', help='Include number variations')
 
     args = parser.parse_args()
 
     generate_wordlist(
         filename=args.output,
         word_count=args.count,
-        min_length=args.min_length,
-        max_length=args.max_length,
-        include_numbers=args.numbers,
-        include_special=args.special,
-        include_common=not args.no_common
+        include_numbers=args.numbers
     )

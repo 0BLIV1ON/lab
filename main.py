@@ -51,7 +51,7 @@ class DirectoryScanner:
 if __name__ == "__main__":
     print(f"{Fore.CYAN}Hidden File and Directory Scanner{Fore.RESET}")
     print("-" * 50)
-    target_url = input(f"{Fore.YELLOW}Enter the target URL (e.g., https://example.com): {Fore.RESET}")
+    target_url = input(f"{Fore.YELLOW}Enter the target URL: {Fore.RESET}")
     
     if not target_url.startswith(('http://', 'https://')):
         target_url = 'https://' + target_url

@@ -1,6 +1,7 @@
 import requests
 import concurrent.futures
 import sys
+import time
 from urllib.parse import urljoin
 from colorama import Fore, init
 
@@ -49,9 +50,12 @@ class DirectoryScanner:
         return self.found_paths
 
 if __name__ == "__main__":
-    print(f"{Fore.CYAN}Hidden File and Directory Scanner{Fore.RESET}")
-    print("-" * 33)
-    target_url = input(f"{Fore.YELLOW}Enter the target URL: {Fore.RESET}")
+    print(f"{Fore.CYAN}Website Scanner{Fore.RESET}")
+    print(f"{Fore.RED}by Barry Jensen{Fore.RESET}")
+    time.sleep(1.5)
+    print("")
+    print("-" * 16)
+    target_url = input(f"{Fore.YELLOW}Enter target URL: {Fore.RESET}")
 
     if not target_url.startswith(('http://', 'https://')):
         target_url = 'https://' + target_url

@@ -1,7 +1,7 @@
 [project]
 name = "repl-nix-workspace"
 version = "0.1.0"
-description = "Add your description here"
+description = "This project provides tools to generate wordlists focused on common web directories and files, and to scan a target URL for hidden files and directories."
 requires-python = ">=3.12"
 dependencies = [
     "colorama>=0.4.6",

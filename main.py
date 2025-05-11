@@ -16,7 +16,6 @@ class DirectoryScanner:
 
     def scan_path(self, path):
         try:
-            # Test both with and without leading dot
             paths_to_test = [
                 path,
                 f".{path}",
@@ -27,6 +26,7 @@ class DirectoryScanner:
 
             for test_path in paths_to_test:
                 full_url = urljoin(self.url, test_path)
+                print(f"Checking: {full_url}")  # Log the URL being checked
                 response = self.session.get(full_url, allow_redirects=True, timeout=10)
 
                 if response.status_code in [200, 301, 302, 403]:
@@ -34,7 +34,7 @@ class DirectoryScanner:
                     self.found_paths.append((full_url, response.status_code))
 
         except Exception as e:
-            pass
+            print(f"Error checking {path}: {e}")  # Log any errors encountered
 
     def run(self):
         print(f"{Fore.YELLOW}[*] Starting scan on {self.url}{Fore.RESET}")

@@ -1,47 +1,57 @@
-import subprocess
-import argparse
+import requests
+import concurrent.futures
 import sys
+from urllib.parse import urljoin
+from colorama import Fore, init
 
-def run_gobuster(url, wordlist='wordlist.txt', threads=10, extensions=None):
-    cmd = ['gobuster', 'dir', 
-           '-u', url,
-           '-w', wordlist,
-           '-t', str(threads)]
+init()
 
-    if extensions:
-        cmd.extend(['-x', ','.join(extensions)])
+class DirectoryScanner:
+    def __init__(self, url, wordlist="wordlist.txt", threads=50):
+        self.url = url.rstrip('/')
+        self.wordlist = wordlist
+        self.threads = threads
+        self.session = requests.Session()
+        self.found_paths = []
 
-    try:
-        process = subprocess.Popen(cmd, 
-                                 stdout=subprocess.PIPE, 
-                                 stderr=subprocess.PIPE,
-                                 universal_newlines=True)
+    def scan_path(self, path):
+        try:
+            # Test both with and without leading dot
+            paths_to_test = [
+                path,
+                f".{path}",
+                f"/.{path}",
+                f"_{path}",
+                f"~{path}"
+            ]
 
-        while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                print(output.strip())
+            for test_path in paths_to_test:
+                full_url = urljoin(self.url, test_path)
+                response = self.session.get(full_url, allow_redirects=True, timeout=10)
 
-        rc = process.poll()
-        if rc != 0:
-            print("Error running gobuster:", process.stderr.read())
-            sys.exit(1)
+                if response.status_code in [200, 301, 302, 403]:
+                    print(f"{Fore.GREEN}[+] Found: {full_url} (Status: {response.status_code}){Fore.RESET}")
+                    self.found_paths.append((full_url, response.status_code))
 
-    except FileNotFoundError:
-        print("Error: Gobuster not found. Please install Gobuster first.")
-        sys.exit(1)
+        except Exception as e:
+            pass
 
-def main():
-    parser = argparse.ArgumentParser(description='Gobuster Directory Scanner Wrapper')
-    parser.add_argument('url', help='Target URL')
-    parser.add_argument('-w', '--wordlist', default='wordlist.txt', help='Path to wordlist')
-    parser.add_argument('-t', '--threads', type=int, default=10, help='Number of threads')
-    parser.add_argument('-x', '--extensions', nargs='+', help='File extensions to check')
+    def run(self):
+        print(f"{Fore.YELLOW}[*] Starting scan on {self.url}{Fore.RESET}")
 
-    args = parser.parse_args()
-    run_gobuster(args.url, args.wordlist, args.threads, args.extensions)
+        with open(self.wordlist, 'r') as f:
+            paths = f.read().splitlines()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor:
+            executor.map(self.scan_path, paths)
+
+        print(f"\n{Fore.BLUE}[*] Scan complete. Found {len(self.found_paths)} paths{Fore.RESET}")
+        return self.found_paths
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <url>")
+        sys.exit(1)
+
+    scanner = DirectoryScanner(sys.argv[1])
+    scanner.run()

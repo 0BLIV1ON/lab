@@ -1,0 +1,16 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Wordlist files
+wordlist.txt
+
+# Environment variable files
+.env

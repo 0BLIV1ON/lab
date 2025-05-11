@@ -55,9 +55,24 @@ def generate_wordlist(filename: str = "wordlist.txt",
         include_common (bool): Include common directory names
     """
     common_dirs = {
-        'admin', 'login', 'wp-admin', 'dashboard', 'api',
-        'upload', 'images', 'css', 'js', 'static', 'media',
-        'backup', 'db', 'test', 'dev', 'beta', 'prod'
+        # Admin panels
+        'admin', 'administrator', 'wp-admin', 'cpanel', 'phpmyadmin',
+        # Common CMS paths
+        'wp-content', 'wp-includes', 'administrator', 'joomla', 'drupal',
+        # Development
+        'dev', 'test', 'beta', 'staging', 'development', 'production',
+        # Data and backups
+        'backup', 'backups', '.bak', '.backup', '.old', '.save', '.swap', '.swp',
+        # Config and logs
+        'config', '.config', '.env', '.git', '.svn', 'log', 'logs', '.htaccess',
+        # Common directories
+        'upload', 'uploads', 'media', 'static', 'assets', 'files', 'private',
+        # Hidden folders
+        '.ssh', '.npm', '.tmp', '.temp', '.cache', '.hidden',
+        # Common web paths
+        'api', 'rest', 'v1', 'v2', 'docs', 'documentation', 'sdk',
+        # Security related
+        'phpinfo', 'server-status', 'server-info', '.well-known'
     }
     
     words: Set[str] = set()

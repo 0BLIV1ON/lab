@@ -249,6 +249,12 @@ def main():
                         '--extensions',
                         nargs='+',
                         help='File extensions to check (use "all" for common web extensions)')
+    parser.add_argument('--deep',
+                        action='store_true',
+                        help='Enable deep scanning with common backup extensions')
+    parser.add_argument('--fuzzy',
+                        action='store_true',
+                        help='Enable fuzzy matching for common patterns')
     parser.add_argument('-s',
                         '--status-codes',
                         nargs='+',
@@ -290,9 +296,13 @@ def main():
     # Handle "all" extensions option
     if options.get('extensions') and 'all' in options['extensions']:
         options['extensions'] = [
-            '.php', '.html', '.htm', '.js', '.css', '.txt', '.pdf', '.json', 
+            '.php', '.html', '.htm', '.js', '.css', '.txt', '.pdf', '.json',
             '.xml', '.asp', '.aspx', '.jsp', '.sql', '.zip', '.tar.gz', '.tgz',
-            '.doc', '.docx', '.xls', '.xlsx', '.conf', '.bak', '.backup', '.swp'
+            '.doc', '.docx', '.xls', '.xlsx', '.conf', '.bak', '.backup', '.swp',
+            '.env', '.ini', '.cfg', '.config', '.log', '.old', '.temp', '.tmp',
+            '.bak~', '.php~', '.php.bak', '.php.old', '.php_', '_php',
+            '.html.old', '.html.bak', '.htm.old', '.htm.bak', '.txt.old',
+            '.inc', '.inc.php', '.inc.old', '.inc.bak', '.sql.gz', '.sql.bz2'
         ]
     
     scanner = GoBusterWrapper(args.url, options)

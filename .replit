@@ -29,3 +29,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "gobuster dir -u https://example.com -w wordlist.txt -x php,html,txt -t 10"
+
+[[workflows.workflow]]
+name = "Deep Scan"
+author = 16578131
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py https://example.com -x all -t 10 -r --deep --fuzzy -m GET,HEAD,POST -o json"

@@ -3,7 +3,7 @@ modules = ["python-3.12"]
 run = "gobuster dir -u https://example.com -w wordlist.txt -x php,html,txt -t 10"
 
 [nix]
-channel = "stable-24_05"
+channel = "unstable"
 packages = ["gobuster"]
 
 [deployment]
